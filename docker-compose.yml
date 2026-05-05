@@ -1,0 +1,40 @@
+services:
+  db:
+    image: postgres:15
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    env_file:
+      - .env
+    networks:
+      - bookshop_network
+
+  backend:
+    build: .
+    volumes:
+      - static_volume:/app/staticfiles
+    env_file:
+      - .env
+    depends_on:
+      - db
+    networks:
+      - bookshop_network
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf
+      - static_volume:/app/staticfiles
+    depends_on:
+      - backend
+    networks:
+      - bookshop_network
+
+volumes:
+  postgres_data:
+  static_volume:
+
+networks:
+  bookshop_network:
+    driver: bridge
