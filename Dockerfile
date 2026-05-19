@@ -2,13 +2,12 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-COPY requirements.txt .
+COPY artifacts/app-*.tar.gz /tmp/app.tar.gz
+
+RUN tar -xzf /tmp/app.tar.gz -C /app && \
+    rm /tmp/app.tar.gz
 
 RUN pip install --no-cache-dir -r requirements.txt
-
-COPY . .
-
-RUN python manage.py collectstatic --noinput
 
 EXPOSE 8000
 

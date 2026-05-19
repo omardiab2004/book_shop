@@ -9,7 +9,7 @@ services:
       - bookshop_network
 
   backend:
-    build: .
+    image: omardiab04/book-shop:latest
     volumes:
       - static_volume:/app/staticfiles
     env_file:
