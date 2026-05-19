@@ -24,7 +24,6 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
             docker pull omardiab04/book-shop:${{ vars.IMAGE_VERSION }}
-            docker tag omardiab04/book-shop:${{ vars.IMAGE_VERSION }} omardiab04/book-shop:latest
             cd ~/deployments/prod
             docker-compose down
             docker-compose up -d
