@@ -1,109 +1,88 @@
 # Book Shop - Docker + CI/CD Deployment
 
-## Group Size: 2 students
+## Group Info
+- Group size: 1
+- Name: Omar Dyab
+
+---
 
 ## Phase 1 - Docker Setup
 
-### Requirements
+### Whats needed
 - Docker Desktop
-- Git
+- Git installed on your machine
 
-### Setup & Run Instructions
+### How to run it
 
-#### 1. Clone the repository
+First clone the repo:
 git clone https://github.com/omardiab2004/book_shop
 cd book_shop/book-shop
 
-#### 2. Create your .env file
+Then make your .env file by copying the example:
 cp .env.example .env
 
-#### 3. Build and run
+Fill in the values in .env then build and run:
 docker compose up --build
 
-#### 4. Run database migrations
+After that run the migrataions:
 docker compose exec backend python manage.py migrate
 
-#### 5. Access the app
-- Book list: http://localhost
-- Admin panel: http://localhost/admin
+Thats it, open your browser and go to http://localhost to see the app
+For the admin pannel go to http://localhost/admin
 
-#### 6. Stop the app
+To stop everything:
 docker compose down
 
 ---
 
-## Phase 2 - CI/CD Pipelines
+## Phase 2 - CI/CD Piplines
 
-### Branch Strategy
+### Group size choice
+Since this is a group of 1 (treated as group of 2), i used Docker Hub as the registery and run docker compose commands directly on EC2. No automation of the compose file was needed.
 
-This project uses three branches, each with a different deployment philosophy:
+### Branch Stratgy
 
-| Branch | Philosophy | What Ships |
-|--------|-----------|------------|
-| dev | Artifact-first | Image built from a saved artifact |
-| test | Image-first | Fresh image pushed to Docker Hub |
-| prod | Promotion only | Pulls existing image from Docker Hub |
+There are 3 branches each with a diffrent deployment approch:
 
-### How Each Pipeline Works
+| Branch | Philosophy | What it does |
+|--------|-----------|--------------|
+| dev | Artifact-first | builds image from a saved artfact |
+| test | Image-first | rebuilds fresh and pushes to Docker Hub |
+| prod | Promotion only | just pulls existing image, no building |
 
-#### Dev Pipeline (dev branch)
-- Triggered on every push to dev
-- Installs dependencies and collects static files
-- Packages the source code into a tar.gz artifact named app-<commit-sha>.tar.gz
-- Commits the artifact to the artifacts/ folder on the dev branch
-- Builds a Docker image FROM the artifact (not from source)
-- Pushes image to Docker Hub tagged as dev-<sha> and dev-latest
-- Deploys to EC2 on port 8001
+### How each pipline works
 
-#### Test Pipeline (test branch)
-- Triggered on every push to test
-- Rebuilds fresh from source (does NOT reuse dev artifact)
-- Builds a Docker image from the freshly built artifact
-- Pushes image to Docker Hub tagged as test-<sha> and test-latest
-- Deploys to EC2 on port 8002
+#### Dev branch
+Every push to dev triggers this pipline. It installs dependancies and collects static files, then packages everything into a tar.gz artifact named with the commit sha so every build has its own unique file. The artifact gets commited to the artifacts/ folder as an audit trail. Then it builds the docker image FROM that artifact (not from source code directly) and pushes it to Docker Hub. Finally it deploys to EC2 on port 8001.
 
-#### Prod Pipeline (prod branch)
-- Triggered on every push to prod
-- Does NOT build or package anything
-- Reads IMAGE_VERSION from GitHub Actions repository variable
-- Pulls that exact image from Docker Hub
-- Deploys to EC2 on port 80
+#### Test branch
+Every push to test triggers this pipline. It does NOT reuse the artifact from dev, instead it rebuilds everything fresh from source. This proves the build proccess is reliabel and reproducable. It pushes the image to Docker Hub and deploys to EC2 on port 8002.
 
-### How Three Deployments Coexist on One EC2
+#### Prod branch
+Every push to prod triggers this pipline. It does absolutly no building at all. It reads the IMAGE_VERSION variable from github repo settings and pulls that exact image from Docker Hub. Then deploys to EC2 on port 80. This garantees that only tested images reach production.
 
-Each environment runs in its own isolated setup:
+### How 3 deployments coexist on one EC2
 
-| Environment | Port | Compose Project | Network |
-|-------------|------|----------------|---------|
-| dev | 8001 | dev | dev_network |
-| test | 8002 | test | test_network |
-| prod | 80 | prod | prod_network |
+Each environment runs completly isolated:
 
-Each environment has its own:
-- docker-compose.yml in ~/deployments/<env>/
-- PostgreSQL volume
-- Static files volume
-- Bridge network
+| Environment | Port | Network |
+|-------------|------|---------|
+| dev | 8001 | dev_network |
+| test | 8002 | test_network |
+| prod | 80 | prod_network |
 
-This prevents any conflicts between the three deployments.
+Each one has its own docker-compose file in ~/deployments/<env>/, its own database volume and its own network so they dont interfere with eachother at all.
 
-### GitHub Actions Secrets & Variables
+### Secrets and Variables used
 
-#### Secrets
-- EC2_SSH_KEY - Private key for SSH to EC2
-- DOCKERHUB_USERNAME - Docker Hub username
-- DOCKERHUB_TOKEN - Docker Hub access token
-- SECRET_KEY - Django secret key
-- POSTGRES_PASSWORD - PostgreSQL password
+Secrets (sensitive stuff):
+- EC2_SSH_KEY - the private key to ssh into ec2
+- DOCKERHUB_USERNAME - docker hub username
+- DOCKERHUB_TOKEN - docker hub access token
+- SECRET_KEY - django secret key
+- POSTGRES_PASSWORD - database password
 
-#### Variables
-- IMAGE_VERSION - Version tag to deploy to prod
-- EC2_HOST - EC2 instance public IP
-- REGISTRY_NAME - Docker Hub repository name
-
-### Registry
-Group of 2: Docker Hub (omardiab04/book-shop)
-
-### EC2 Deployment
-Group of 2: docker-compose commands run directly on EC2.
-The compose files live on the server at ~/deployments/<env>/.
+Variables (non sensitive config):
+- IMAGE_VERSION - the version to deploy to prod
+- EC2_HOST - the ec2 ip adress
+- REGISTRY_NAME - the docker hub repo name
